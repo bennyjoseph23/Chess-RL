@@ -1,0 +1,6 @@
+streamlit
+pyzmq
+torch
+numpy
+python-chess
+streamlit-echarts
