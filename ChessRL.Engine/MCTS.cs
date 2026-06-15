@@ -52,9 +52,10 @@ public class MCTSNode
     {
         for (int i = 0; i < moves.Length; i++)
         {
-            // In a real implementation, we would apply the move to a new board state
-            // For now, we scaffold the child node
-            Children.Add(new MCTSNode(null, moves[i], this, priors[i]));
+            // Apply the move to create a NEW board state for the child
+            Board nextState = State.Clone();
+            nextState.MakeMove(moves[i]);
+            Children.Add(new MCTSNode(nextState, moves[i], this, priors[i]));
         }
     }
 

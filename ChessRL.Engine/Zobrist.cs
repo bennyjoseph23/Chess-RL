@@ -9,7 +9,7 @@ public static class Zobrist
 
     static Zobrist()
     {
-        Random rng = new Random(42); // Deterministic for now
+        Random rng = new Random(42); 
         for (int i = 0; i < 12; i++)
             for (int j = 0; j < 64; j++)
                 PieceSquareKeys[i, j] = NextUlong(rng);
@@ -26,17 +26,27 @@ public static class Zobrist
         return BitConverter.ToUInt64(buffer, 0);
     }
 
+    public static ulong GetPieceKey(Piece piece, Color color, Square sq)
+    {
+        if (piece == Piece.None || sq == Square.None) return 0;
+        int index = (int)piece - 1;
+        if (color == Color.Black) index += 6;
+        return PieceSquareKeys[index, (int)sq];
+    }
+
+    public static ulong GetCastlingKey(int rights) => CastlingKeys[rights];
+    public static ulong GetSideKey() => SideToMoveKey;
+
     public static ulong CalculateHash(Board board)
     {
         ulong hash = 0;
-        // Piece/Square hashing
         for (int piece = (int)Piece.Pawn; piece <= (int)Piece.King; piece++)
         {
             ulong whiteBB = board.Bitboard.PieceBB[piece] & board.Bitboard.ColorBB[(int)Color.White];
             while (whiteBB != 0)
             {
                 Square sq = BitboardUtils.LSB(whiteBB);
-                hash ^= PieceSquareKeys[piece - 1, (int)sq];
+                hash ^= GetPieceKey((Piece)piece, Color.White, sq);
                 whiteBB &= whiteBB - 1;
             }
 
@@ -44,7 +54,7 @@ public static class Zobrist
             while (blackBB != 0)
             {
                 Square sq = BitboardUtils.LSB(blackBB);
-                hash ^= PieceSquareKeys[piece + 5, (int)sq];
+                hash ^= GetPieceKey((Piece)piece, Color.Black, sq);
                 blackBB &= blackBB - 1;
             }
         }

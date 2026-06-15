@@ -1,9 +1,10 @@
 using ChessRL.Engine;
 
-Console.WriteLine("--- Chess-RL Simulator Started ---");
+bool useDashboard = args.Contains("--dashboard");
+Console.WriteLine($"--- Chess-RL Simulator Started (Visuals: {(useDashboard ? "ON" : "OFF")}) ---");
 
 using var messenger = new Messenger("tcp://*:5555");
-var searchManager = new SearchManager(messenger);
+var searchManager = new SearchManager(messenger) { EnableVisuals = useDashboard };
 var board = new Board();
 
 int gameCount = 0;
@@ -16,12 +17,20 @@ while (true)
     while (moveCount < 200) // Safety cap for game length
     {
         // 1. Let the AI "Think" using MCTS
-        // 400 simulations is a good starting point for training
-        Move bestMove = searchManager.IterativeDeepening(board, 400);
+        // Use temperature for variety in the opening
+        float temperature = (board.FullMoveNumber <= 15) ? 1.0f : 0.1f;
+        Move bestMove = searchManager.IterativeDeepening(board, 800, temperature);
         
-        if (bestMove.From == bestMove.To) // No legal moves found (Draw or Mate)
+        if (bestMove.From == bestMove.To) 
         {
-            Console.WriteLine("Game Over: No legal moves.");
+            int us = (int)board.SideToMove;
+            int them = 1 - us;
+            Square kingSq = BitboardUtils.LSB(board.Bitboard.PieceBB[(int)Piece.King] & board.Bitboard.ColorBB[us]);
+            
+            if (MoveGenerator.IsSquareAttacked(board, kingSq, them))
+                Console.WriteLine($"CHECKMATE! {(board.SideToMove == Color.White ? "Black" : "White")} wins.");
+            else
+                Console.WriteLine("DRAW by Stalemate.");
             break;
         }
 
@@ -30,14 +39,25 @@ while (true)
         moveCount++;
 
         // 3. Log progress
-        Console.WriteLine($"Move {moveCount}: {bestMove} | Hash: {Zobrist.CalculateHash(board):X}");
+        string checkStatus = board.IsInCheck() ? " [CHECK!]" : "";
+        Console.WriteLine($"Move {moveCount}: {bestMove}{checkStatus} | Hash: {board.CurrentHash:X}");
 
-        // 4. Send the updated board to the Dashboard
+        // 4. Check for special Draw rules
+        if (board.HalfMoveClock >= 100) // 100 half-moves = 50 full moves
+        {
+            Console.WriteLine("DRAW by Fifty-Move Rule.");
+            break;
+        }
+        if (board.IsThreefoldRepetition())
+        {
+            Console.WriteLine("DRAW by Threefold Repetition.");
+            break;
+        }
         messenger.BroadcastEvaluation("game_update", new {
             FullMove = board.FullMoveNumber,
             Side = board.SideToMove.ToString(),
             LastMove = bestMove.ToString(),
-            Fen = "Board state update" // In a real app, convert board to FEN
+            Fen = board.GetFen()
         });
 
         // Small delay to prevent ZeroMQ from flooding during local dev
