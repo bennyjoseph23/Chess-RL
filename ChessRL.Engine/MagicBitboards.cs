@@ -122,7 +122,7 @@ public static class MagicBitboards
         for (int i = r + 1; i < 7; i++) mask |= 1UL << (i * 8 + f);
         for (int i = r - 1; i > 0; i--) mask |= 1UL << (i * 8 + f);
         for (int i = f + 1; i < 7; i++) mask |= 1UL << (r * 8 + i);
-        for (int i = f - 1; i > 0; i--) mask |= 1UL << (r * 8 - f + i);
+        for (int i = f - 1; i > 0; i--) mask |= 1UL << (r * 8 + i);
         return mask;
     }
 

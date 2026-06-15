@@ -16,7 +16,7 @@ class Trainer:
         if model_path:
             self.model.load_state_dict(torch.load(model_path))
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-        self.bridge = Bridge()
+        self.bridge = Bridge(pub_address="tcp://*:5556")
 
     def run_inference_server(self):
         print(f"--- AI Brain Inference Server Started on {self.device} ---")
